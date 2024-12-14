@@ -15,6 +15,11 @@ RizzScript is a Python-based GUI application designed to facilitate transcriptio
 
 - Python 3.8+
 - AssemblyAI Python SDK
+- `tkinter`: For the GUI (comes pre-installed with Python on most systems).
+- `os`: For interacting with the operating system.
+- `json`: For reading and writing configuration files.
+- `threading`: For running tasks in the background.
+- Internet connection: Required for transcription services.
 
 Install dependencies:
 ```bash
@@ -73,8 +78,8 @@ Enable or disable word wrapping in the editor from `View > Toggle Word Wrap`.
 
 - `tkinter`: For the GUI.
 - `assemblyai`: For transcription services.
-- `json`: For configuration management.
 - `os`: For file path operations.
+- `json`: For configuration management.
 - `threading`: For running transcription in the background.
 
 ## Error Handling
