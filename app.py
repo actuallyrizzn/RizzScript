@@ -2,18 +2,23 @@ import sys
 import os
 import json
 import re
+import random
 import assemblyai as aai
 import openai  # Ensure the OpenAI library is installed
 
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTextEdit, QAction,
     QFileDialog, QMessageBox, QInputDialog, QProgressBar, QStatusBar,
     QDialog, QFormLayout, QDialogButtonBox, QLineEdit, QVBoxLayout,
-    QHBoxLayout, QLabel, QPushButton, QWidget, QDockWidget
+    QHBoxLayout, QLabel, QPushButton, QWidget, QDockWidget, QCheckBox
 )
 
-# Default config file path
+# ----------------------------
+# Helper Functions and Config
+# ----------------------------
+
 CONFIG_FILE = "config.json"
 
 def load_config():
@@ -26,7 +31,6 @@ def save_config(config):
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=4)
 
-# Helper function to extract valid JSON from text.
 def extract_json(text):
     try:
         return json.loads(text)
@@ -39,17 +43,22 @@ def extract_json(text):
         else:
             raise ValueError("No valid JSON found in text.")
 
-# Load configuration and set API keys
+def seconds_to_hhmmss(seconds):
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
 config = load_config()
 API_KEY = config.get("assemblyai_api_key", "")
 OPENAI_API_KEY = config.get("openai_api_key", "")
 
-aai.settings.api_key = API_KEY  # Use AssemblyAI API key for transcription.
+aai.settings.api_key = API_KEY  # Use AssemblyAI API key.
 # For OpenAI, we'll set openai.api_key when needed.
 
-###############################################################################
+# ----------------------------
 # Settings Dialog
-###############################################################################
+# ----------------------------
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -78,11 +87,12 @@ class SettingsDialog(QDialog):
     def get_values(self):
         return self.assemblyai_edit.text().strip(), self.openai_edit.text().strip()
 
-###############################################################################
+# ----------------------------
 # Transcription Thread
-###############################################################################
+# ----------------------------
 class TranscriptionThread(QThread):
-    transcription_finished = pyqtSignal(str)
+    # Emits a tuple: (plain transcript text, full transcript object)
+    transcription_finished = pyqtSignal(object)
     error_occurred = pyqtSignal(str)
 
     def __init__(self, file_path, parent=None):
@@ -92,18 +102,47 @@ class TranscriptionThread(QThread):
     def run(self):
         try:
             transcriber = aai.Transcriber()
-            config_trans = aai.TranscriptionConfig(speaker_labels=True)
+            # Enable speaker diarization.
+            config_trans = aai.TranscriptionConfig(
+                speaker_labels=True
+            )
             transcript = transcriber.transcribe(self.file_path, config=config_trans)
             result_text = ""
             for utterance in transcript.utterances:
                 result_text += f"Speaker {utterance.speaker}: {utterance.text}\n"
-            self.transcription_finished.emit(result_text)
+            self.transcription_finished.emit((result_text, transcript))
         except Exception as e:
             self.error_occurred.emit(str(e))
 
-###############################################################################
+# ----------------------------
+# Mapping Worker (for OpenAI API call)
+# ----------------------------
+class MappingWorker(QThread):
+    mappingReady = pyqtSignal(str)
+    errorOccurred = pyqtSignal(str)
+
+    def __init__(self, prompt, parent=None):
+        super().__init__(parent)
+        self.prompt = prompt
+
+    def run(self):
+        try:
+            openai.api_key = OPENAI_API_KEY
+            response = openai.ChatCompletion.create(
+                model="o1",
+                messages=[
+                    {"role": "system", "content": "You are an expert in speaker attribution."},
+                    {"role": "user", "content": self.prompt},
+                ]
+            )
+            result_text = response.choices[0].message.content.strip()
+            self.mappingReady.emit(result_text)
+        except Exception as e:
+            self.errorOccurred.emit(str(e))
+
+# ----------------------------
 # Search & Replace Dialog
-###############################################################################
+# ----------------------------
 class SearchReplaceDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -127,22 +166,23 @@ class SearchReplaceDialog(QDialog):
         result = dialog.exec_()
         return (dialog.search_edit.text(), dialog.replace_edit.text(), result == QDialog.Accepted)
 
-###############################################################################
+# ----------------------------
 # Speaker Mapping Widget (Side Panel)
-###############################################################################
+# ----------------------------
 class SpeakerMappingWidget(QWidget):
     mappingApplied = pyqtSignal(dict)
-    autopopulateRequested = pyqtSignal()  # Signal for autopopulate button
-
+    autopopulateRequested = pyqtSignal()      # For auto-populating speaker names.
+    applyTimestampsRequested = pyqtSignal()   # For toggling timestamps.
+    
     def __init__(self, speaker_list, parent=None):
         super().__init__(parent)
-        self.speaker_list = speaker_list  # List of generic speaker labels
+        self.speaker_list = speaker_list
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout(self)
         
-        # Candidate Names input at the top.
+        # Candidate Names input.
         candidate_layout = QHBoxLayout()
         candidate_label = QLabel("Candidate Names (optional, comma-separated):")
         self.candidate_edit = QLineEdit(self)
@@ -150,20 +190,32 @@ class SpeakerMappingWidget(QWidget):
         candidate_layout.addWidget(self.candidate_edit)
         layout.addLayout(candidate_layout)
         
-        # "Attempt to Autopopulate" button.
+        # Progress log area for fake chain-of-thought.
+        self.progress_log = QTextEdit(self)
+        self.progress_log.setReadOnly(True)
+        self.progress_log.setFixedHeight(100)
+        self.progress_log.setPlaceholderText("Progress log...")
+        layout.addWidget(self.progress_log)
+        
+        # Buttons: Autopopulate and Toggle Timestamps.
+        buttons_layout = QHBoxLayout()
         self.autopopulate_button = QPushButton("Attempt to Autopopulate", self)
         self.autopopulate_button.clicked.connect(lambda: self.autopopulateRequested.emit())
-        layout.addWidget(self.autopopulate_button)
+        buttons_layout.addWidget(self.autopopulate_button)
+        self.apply_timestamps_button = QPushButton("Apply Timestamps", self)
+        self.apply_timestamps_button.clicked.connect(lambda: self.applyTimestampsRequested.emit())
+        buttons_layout.addWidget(self.apply_timestamps_button)
+        layout.addLayout(buttons_layout)
         
         header = QLabel("Map Detected Speakers to Names:")
         layout.addWidget(header)
 
-        self.entries = {}  # QLineEdit for each speaker label.
+        self.entries = {}
         for speaker in sorted(self.speaker_list):
             h_layout = QHBoxLayout()
             label = QLabel(speaker)
             line_edit = QLineEdit()
-            line_edit.setPlaceholderText("Enter full name (or a single name if that's all that's given)")
+            line_edit.setPlaceholderText("Enter full name (or just a first name if that's all available)")
             self.entries[speaker] = line_edit
             h_layout.addWidget(label)
             h_layout.addWidget(line_edit)
@@ -197,9 +249,15 @@ class SpeakerMappingWidget(QWidget):
                 mapping[speaker] = new_name
         self.mappingApplied.emit(mapping)
 
-###############################################################################
+    def update_progress_log(self, message):
+        self.progress_log.append(message)
+
+    def clear_progress_log(self):
+        self.progress_log.clear()
+
+# ----------------------------
 # Main Window
-###############################################################################
+# ----------------------------
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -209,6 +267,10 @@ class MainWindow(QMainWindow):
         self.text_edit = QTextEdit()
         self.setCentralWidget(self.text_edit)
         self.word_wrap_enabled = True
+
+        # Set a larger, fixed-width font.
+        font = QFont("Consolas", 14)
+        self.text_edit.setFont(font)
 
         self.create_menus()
 
@@ -226,6 +288,31 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Configuration Error", "AssemblyAI API key is missing! Please set it in Settings.")
 
         self.transcription_thread = None
+        self.last_transcript = None    # Full transcript object.
+        self.plain_transcript_text = None  # Transcript text without timestamps.
+        self.timestamps_applied = False  # Toggle state.
+        # Fake progress using QTimer.singleShot with randomized delays.
+        self.fake_progress_active = False
+        self.fake_progress_steps = [
+            ["Scanning transcript...", "Reviewing conversation structure...", "Initializing speaker analysis..."],
+            ["Detecting distinct speech patterns...", "Tracking speaker contributions...", "Analyzing dialogue frequency..."],
+            ["Identifying recurring phrases and unique vocabulary...", "Extracting key terms...", "Noticing distinct lexical patterns..."],
+            ["Observing direct participant address...", "Detecting explicit name mentions...", "Noticing direct references in segments..."],
+            ["Speaker A appears to lead the discussion...", "A primary speaker sets the conversation tone...", "Speaker A's dialogue indicates leadership..."],
+            ["Speaker B responds but rarely initiates topics...", "A participant is mainly reactive...", "Speaker B builds on existing points..."],
+            ["Noting that questions are often directed to Speaker A...", "Tracking the flow of inquiries...", "Observing frequent clarifications for Speaker A..."],
+            ["Monitoring shifts in tone and formality...", "Observing subtle variations in speech tone...", "Noting differences in conversational style..."],
+            ["Cross-checking explicit name mentions with speaker labels...", "Validating any detected names...", "Verifying clear name references..."],
+            ["Observing patterns of acknowledgment between speakers...", "Tracking mutual references...", "Noticing consistent interactions..."],
+            ["Speaker A frequently recalls past discussions...", "Continuity in Speaker A's dialogue is evident...", "Noting references to previous conversations..."],
+            ["Aligning inferred speaker identities with conversation dynamics...", "Mapping roles based on dialogue cues...", "Determining speaker identities from context..."],
+            ["Finalizing speaker mapping...", "Compiling final identity assignments...", "Consolidating findings into a structured mapping..."],
+            ["Validating consistency across responses...", "Ensuring uniform speaker attribution...", "Cross-checking speaker roles for consistency..."],
+            ["Mapping complete.", "Speaker mapping finalized.", "Attribution process complete."]
+        ]
+        self.fake_progress_step_index = 0
+        self.fake_progress_active = False
+        self.mapping_worker = None  # For the MappingWorker instance.
         self.speaker_mapping_dock = None
 
     def create_menus(self):
@@ -320,11 +407,16 @@ class MainWindow(QMainWindow):
         if self.transcription_thread and self.transcription_thread.isRunning():
             self.status_bar.showMessage("Transcribing file...")
 
-    def on_transcription_finished(self, transcript_text):
+    def on_transcription_finished(self, result):
+        # result is a tuple: (plain transcript text, transcript object)
         if self.status_timer.isActive():
             self.status_timer.stop()
         self.stop_progress("Transcription complete!")
         self.set_ui_enabled(True)
+        transcript_text, transcript_obj = result
+        self.last_transcript = transcript_obj
+        self.plain_transcript_text = transcript_text
+        self.timestamps_applied = False
         self.text_edit.setPlainText(transcript_text)
         speakers = set(re.findall(r"(Speaker\s+[A-Z0-9]+):", transcript_text))
         print("Detected Speakers:", speakers)
@@ -372,61 +464,113 @@ class MainWindow(QMainWindow):
         self.speaker_mapping_dock.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
         self.mapping_widget = SpeakerMappingWidget(speaker_list, self)
         self.mapping_widget.autopopulateRequested.connect(self.handleAutopopulate)
+        self.mapping_widget.applyTimestampsRequested.connect(self.handleApplyTimestamps)
         self.mapping_widget.mappingApplied.connect(self.apply_speaker_mapping)
         self.speaker_mapping_dock.setWidget(self.mapping_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.speaker_mapping_dock)
 
+    def start_fake_progress(self):
+        self.fake_progress_active = True
+        self.fake_progress_step_index = 0
+        self.mapping_widget.clear_progress_log()
+        self.schedule_next_fake_progress()
+
+    def schedule_next_fake_progress(self):
+        if not self.fake_progress_active:
+            return
+        # Randomized delay between 2000 and 4000 ms.
+        delay = random.randint(2000, 4000)
+        QTimer.singleShot(delay, self.update_fake_progress)
+
+    def update_fake_progress(self):
+        if not self.fake_progress_active:
+            return
+        if self.fake_progress_step_index < len(self.fake_progress_steps):
+            step_variations = self.fake_progress_steps[self.fake_progress_step_index]
+            message = random.choice(step_variations)
+            self.mapping_widget.update_progress_log(message)
+            self.fake_progress_step_index += 1
+        else:
+            # Continue cycling the final step.
+            final_variations = self.fake_progress_steps[-1]
+            message = random.choice(final_variations)
+            self.mapping_widget.update_progress_log(message)
+        self.schedule_next_fake_progress()
+
+    def stop_fake_progress(self):
+        self.fake_progress_active = False
+
     def handleAutopopulate(self):
+        self.start_fake_progress()  # Start fake progress logging.
         candidates = self.mapping_widget.getCandidateNames()
         speakers = self.mapping_widget.getSpeakers()
-        transcript_text = self.text_edit.toPlainText()  # Use the full transcript for context.
+        transcript_text = self.text_edit.toPlainText()  # Full transcript context.
         if candidates:
             prompt = (
-                f"You are an expert in speaker attribution. Your task is to analyze the full transcript below and match each generic speaker label to a realistic and distinct speaker name based solely on the full transcript context.\n\n"
+                f"You are an expert in speaker attribution. Your task is to analyze the full transcript below and match each generic speaker label "
+                f"to a realistic and distinct speaker name based solely on the full transcript context.\n\n"
                 f"Full Transcript:\n{transcript_text}\n\n"
                 f"Generic Speaker Labels: {', '.join(speakers)}\n\n"
                 f"Candidate Names Provided: {', '.join(candidates)}\n\n"
                 "Please provide speaker names as accurately as possible for every speaker label based solely on the full transcript context. "
-                "Do not output any placeholder such as 'Unknown <X>' unless absolutely no contextual evidence is available. Even if candidate names are not provided, try to infer a plausible name from the transcript based on conversational context clues.\n\n"
+                "Do not output any placeholder such as 'Unknown <X>' unless absolutely no contextual evidence is available. "
+                "Even if candidate names are not provided, try to infer a plausible name from the transcript based on conversational context clues.\n\n"
                 "Output the result as a valid JSON object only, with no extra text.\n"
-                'Example output: {"Speaker A": "Shlomo", "Speaker B": "Mark", "Speaker C": "Jonathan"}'
+                'Example output: {"Speaker A": "Shlomo", "Speaker B": "Mark"}'
             )
         else:
             prompt = (
-                f"You are an expert in speaker attribution. Your task is to analyze the full transcript below and determine realistic and distinct speaker names for each generic speaker label based solely on context.\n\n"
+                f"You are an expert in speaker attribution. Your task is to analyze the full transcript below and determine realistic and distinct speaker names "
+                f"for each generic speaker label based solely on context.\n\n"
                 f"Full Transcript:\n{transcript_text}\n\n"
                 f"Generic Speaker Labels: {', '.join(speakers)}\n\n"
                 "Please provide speaker names as accurately as possible for every speaker label based solely on the full transcript context. "
-                "Do not output any placeholder such as 'Unknown <X>' unless absolutely no contextual evidence is available. Even if candidate names are not provided, try to infer a plausible name from the transcript based on conversational context clues.\n\n"
+                "Do not output any placeholder such as 'Unknown <X>' unless absolutely no contextual evidence is available. "
+                "Even if candidate names are not provided, try to infer a plausible name from the transcript based on conversational context clues.\n\n"
                 "Output the result as a valid JSON object only, with no extra text.\n"
-                'Example output: {"Speaker A": "Shlomo", "Speaker B": "Mark", "Speaker C": "Jonathan"}'
+                'Example output: {"Speaker A": "Shlomo", "Speaker B": "Mark"}'
             )
-        try:
-            openai.api_key = OPENAI_API_KEY
-            response = openai.ChatCompletion.create(
-                model="o1",  # Use the latest non-mini o1 model.
-                messages=[
-                    {"role": "system", "content": "You are an expert in speaker attribution."},
-                    {"role": "user", "content": prompt},
-                ]
-            )
-            result_text = response.choices[0].message.content.strip()
-            print("Auto Mapping Raw Response:", result_text)
-            if 'usage' in response:
-                print("Token Usage:", response['usage'])
-            mapping = extract_json(result_text)
-            self.mapping_widget.populateFields(mapping)
-        except Exception as e:
-            QMessageBox.critical(self, "Auto Mapping Error", f"An error occurred: {str(e)}")
+        self.mapping_worker = MappingWorker(prompt)
+        self.mapping_worker.mappingReady.connect(self.on_mapping_ready)
+        self.mapping_worker.errorOccurred.connect(self.on_mapping_error)
+        self.mapping_worker.start()
+
+    def on_mapping_ready(self, result_text):
+        self.stop_fake_progress()  # Stop fake progress updates.
+        print("Auto Mapping Raw Response:", result_text)
+        mapping = extract_json(result_text)
+        self.mapping_widget.populateFields(mapping)
+        self.mapping_widget.update_progress_log("Mapping complete.")
+        self.mapping_worker = None
+
+    def on_mapping_error(self, error_message):
+        self.stop_fake_progress()
+        QMessageBox.critical(self, "Auto Mapping Error", f"An error occurred: {error_message}")
+        self.mapping_worker = None
+
+    def handleApplyTimestamps(self):
+        if not self.last_transcript:
+            QMessageBox.warning(self, "Error", "No transcript data available.")
+            return
+        if not self.timestamps_applied:
+            new_text = ""
+            for utt in self.last_transcript.utterances:
+                sec_time = utt.start / 1000.0  # Convert ms to s.
+                ts = seconds_to_hhmmss(sec_time)
+                new_text += f"[{ts}] Speaker {utt.speaker}: {utt.text}\n"
+            self.text_edit.setPlainText(new_text)
+            self.timestamps_applied = True
+            self.mapping_widget.apply_timestamps_button.setText("Remove Timestamps")
+        else:
+            self.text_edit.setPlainText(self.plain_transcript_text)
+            self.timestamps_applied = False
+            self.mapping_widget.apply_timestamps_button.setText("Apply Timestamps")
 
     def apply_speaker_mapping(self, mapping):
         content = self.text_edit.toPlainText()
         for speaker_label, real_name in mapping.items():
             content = content.replace(speaker_label, real_name)
         self.text_edit.setPlainText(content)
-        if self.speaker_mapping_dock:
-            self.removeDockWidget(self.speaker_mapping_dock)
-            self.speaker_mapping_dock = None
         QMessageBox.information(self, "Speaker Mapping", "Speaker names have been updated.")
 
 if __name__ == "__main__":
