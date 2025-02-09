@@ -1,130 +1,146 @@
-# RizzScript
+# **RizzScript**  
 
-RizzScript is a **PyQt5**‐based GUI application for transcribing audio files and mapping speaker labels to real names. It leverages **AssemblyAI** for speech‑to‑text with speaker diarization and can optionally integrate **OpenAI** to guess speaker identities. The interface includes a text editor, search/replace functionality, timestamps toggling, and a **fake chain‑of‑thought** progress log for a lively user experience.
+**RizzScript** is a **PyQt5-based GUI application** for **audio transcription, speaker mapping, and timestamp management**. It leverages **AssemblyAI** for transcription and diarization, with **OpenAI-powered speaker attribution**. The UI includes **search/replace, a toggleable timestamp feature, and a fake chain-of-thought progress log** for a smooth UX.
 
-## Features
+---
 
-- **Audio Transcription with Speaker Labels**  
-  - Supports `.mp3`, `.wav`, and `.ogg` files.  
-  - Uses **AssemblyAI** to produce transcripts with speaker diarization.  
-- **Speaker Mapping & Name Guessing**  
-  - A side panel allows you to **autopopulate** speaker names via OpenAI’s API.  
-  - Displays a **fake chain-of-thought** progress log while waiting for the API response.  
-- **Search & Replace**  
-  - Easily replace text in the main editor.  
-- **Timestamps Toggle**  
-  - Apply or remove timestamps in the transcript at any time.  
-- **File Operations**  
-  - Open audio files for transcription.  
-  - Open/save `.txt` files to preserve or edit transcript text.  
-- **Word Wrap**  
-  - Toggle line-wrapping in the text editor.  
-- **Configurable**  
-  - AssemblyAI and OpenAI API keys are read from `config.json`.  
-  - Manage them through the “Settings” dialog.
+## **🔹 Features**
+✔ **Audio Transcription with Speaker Labels**  
+   - Supports **`.mp3`, `.wav`, `.ogg`** formats.  
+   - Uses **AssemblyAI** for **speech-to-text with diarization**.  
 
-## Prerequisites
+✔ **Speaker Mapping & Auto-Guessing**  
+   - Maps `Speaker A`, `Speaker B`, etc. to real names.  
+   - **OpenAI integration** provides name suggestions.  
+   - **Fake chain-of-thought progress log** updates while processing.  
 
+✔ **Timestamps Toggle**  
+   - Apply or remove timestamps dynamically (`[HH:MM:SS]`).  
+
+✔ **Text Editor with Search & Replace**  
+   - Standard **find/replace** functionality.  
+
+✔ **File Operations**  
+   - **Open** and **save** `.txt` files to edit transcripts.  
+
+✔ **Fully Threaded for Performance**  
+   - **Transcription & Speaker Mapping** run in the background.  
+   - **No UI freezing!**  
+
+✔ **Configuration Management**  
+   - API keys stored in **`config.json`** for easy access.  
+
+---
+
+## **📥 Prerequisites**
+**Install dependencies:**
+```bash
+pip install pyqt5 assemblyai openai
+```
 - **Python 3.8+**  
-- **PyQt5** for the GUI  
-  ```bash
-  pip install pyqt5
-  ```
-- **AssemblyAI Python SDK** for speech‑to‑text  
-  ```bash
-  pip install assemblyai
-  ```
-- **OpenAI Python Library** if you plan to use name auto‑mapping  
-  ```bash
-  pip install openai
-  ```
+- **PyQt5** (for GUI)  
+- **AssemblyAI** (for transcription)  
+- **OpenAI API** *(if using name guessing)*  
 
-## Getting Started
+---
 
-1. **Clone this repository**:
+## **🚀 Getting Started**
+1. **Clone the repository:**
    ```bash
    git clone <repository-url>
-   cd <repository-folder>
+   cd RizzScript
    ```
-
-2. **Install dependencies**:
+2. **Run the application:**
    ```bash
-   pip install pyqt5 assemblyai openai
+   python app.py
    ```
-   *(Adjust as needed for your environment.)*
+3. **Enter API Keys:**  
+   - Click **File > Settings**  
+   - Enter your **AssemblyAI** and **OpenAI** API keys.  
+   - Keys are stored in `config.json`.  
 
-3. **Run the application**:
+---
+
+## **📂 File Structure**
+| Directory/File          | Description |
+|-------------------------|------------|
+| **`app.py`**            | Main application file. |
+| **`config.json`**       | Stores API keys for AssemblyAI & OpenAI. |
+| **`dist/`**             | Contains compiled `.exe` (Windows builds). |
+| **`build/`**            | Temporary build files (can be ignored). |
+| **`old/`**              | Backup of older versions. |
+| **`RizzScript.spec`**   | PyInstaller spec file for packaging. |
+| **`.git/`**             | Git repository metadata (ignore). |
+
+---
+
+## **🎯 Usage Guide**
+### **1️⃣ Transcribing Audio Files**
+1. Click **File > Open Audio File**  
+2. Select an **audio file** (`.mp3`, `.wav`, `.ogg`).  
+3. **Transcription runs in the background.**  
+4. **Diarized transcript appears** in the text editor.  
+
+### **2️⃣ Speaker Mapping**
+1. The **Speaker Mapping Panel** opens after transcription.  
+2. **Optional**: Enter **candidate names** in a comma-separated list.  
+3. Click **"Attempt to Autopopulate"**  
+   - Fake chain-of-thought logs update in real-time.  
+   - When complete, suggested names appear.  
+4. Click **"Apply Changes"** to update the transcript.  
+
+### **3️⃣ Toggling Timestamps**
+- Click **"Apply Timestamps"** to add `[HH:MM:SS]` at the start of each utterance.  
+- Click again to **remove timestamps**.  
+
+### **4️⃣ Editing & Saving Transcripts**
+- **Edit text freely.**  
+- **Search & Replace:** `Edit > Search and Replace`  
+- **Save transcript:** `File > Save` (`.txt` format).  
+
+---
+
+## **🖥 Compiling for Windows**
+1. **Install PyInstaller:**  
    ```bash
-   python rizzscript.py
+   pip install pyinstaller
    ```
+2. **Build the executable:**
+   ```bash
+   pyinstaller --onefile --windowed --name "RizzScript" app.py
+   ```
+3. **Find the `.exe` in `dist/`**
 
-4. **Update API Keys**  
-   - Click **File > Settings** to enter your **AssemblyAI** and **OpenAI** API keys.  
-   - They’ll be stored in `config.json`.
+---
 
-## File Structure
+## **🎯 Keyboard Shortcuts**
+| Action                 | Shortcut |
+|------------------------|---------|
+| **Save File**          | `Ctrl + S` |
+| **Copy**               | `Ctrl + C` |
+| **Cut**                | `Ctrl + X` |
+| **Paste**              | `Ctrl + V` |
 
-- `rizzscript.py`: Main application code.
-- `config.json`: Stores API keys for AssemblyAI and OpenAI (generated on first run if missing).
+---
 
-## Usage
+## **🛠 Known Limitations**
+- **Text-Only Name Guessing**: Speaker auto‑mapping is based on **text from the transcript**.  
+- **Fake Chain-of-Thought Log**: The UI progress log **does not reflect real AI reasoning.** It exists purely for UX feedback.  
 
-### 1. Transcribing Audio Files
+---
 
-1. **File > Open Audio File**  
-2. Select an audio file (`.mp3`, `.wav`, `.ogg`).  
-3. RizzScript spins up a background worker to transcribe the file via **AssemblyAI**.  
-4. The transcribed text appears in the main editor; each **Speaker** label (like `Speaker A`, `Speaker B`) is diarized.
+## **📜 License**
+This project is licensed under the **MIT License**. See `LICENSE` for details.  
 
-### 2. Speaker Mapping & Name Auto-populate
+---
 
-1. After transcription, a **Speaker Mapping Panel** appears on the right.  
-2. (Optional) Enter **candidate names** in a comma-separated list.  
-3. Click **“Attempt to Autopopulate.”**  
-   - A **fake chain-of-thought** progress log updates every few seconds while **OpenAI** is working.  
-   - When done, the panel is populated with best‑guess names.  
-4. Click **“Apply Changes”** to replace `Speaker A`, `Speaker B`, etc. in the editor with the guessed names.
+**🎉 Congrats! You’re ready to use RizzScript!** 🚀  
+Need help? **Open an issue or submit a pull request!**  
 
-### 3. Timestamps Toggle
+---
 
-- In the side panel, click **“Apply Timestamps”** to show `[HH:MM:SS]` at the start of each utterance.  
-- Click again to **“Remove Timestamps”** and revert to the plain transcript.
-
-### 4. Search & Replace
-
-1. **Edit > Search and Replace**  
-2. Enter the text to search and replacement text.  
-3. Click **OK** to replace all occurrences in the editor.
-
-### 5. Save & Open Text Files
-
-- **File > Save** to store the current transcript as a `.txt`.  
-- **File > Open** (not to be confused with Open Audio File) to load an existing `.txt`.
-
-## Shortcuts
-
-| Action            | Shortcut   |
-|-------------------|------------|
-| **Save File**     | Ctrl + S   |
-| **Copy**          | Ctrl + C   |
-| **Cut**           | Ctrl + X   |
-| **Paste**         | Ctrl + V   |
-
-## Behind the Scenes
-
-- **Threaded Transcription**  
-  - Uses `TranscriptionThread` to avoid freezing the UI.
-- **Fake Progress Log**  
-  - A timer updates the side panel with randomized chain-of-thought messages while the name auto‑mapping request runs in a separate `MappingWorker` thread.
-- **config.json**  
-  - Stores your `assemblyai_api_key` and `openai_api_key`.  
-  - Automatically generated if missing.
-
-## Known Limitations
-
-- **Text-Only Name Guessing**: Speaker auto‑mapping relies on text from the transcript. If the transcript lacks explicit clues, guesses may be incorrect.  
-- **Fake Chain-of-Thought**: The progress log is purely for user feedback and does not represent the actual model’s internal reasoning.
-
-## License
-
-This project is licensed under the **MIT License**. See `LICENSE` for details.
+### **🔹 Changes from the Original**
+- **Clarified File Structure**: Highlighted **important** vs. **ignored** files.  
+- **Expanded Usage Guide**: Made it **super clear** how to use **speaker mapping, timestamps, and editing.**  
+- **Windows Build Instructions**: Added a PyInstaller guide.  
+- **Known Limitations Section**: So users aren’t confused by what’s fake vs. real.  
