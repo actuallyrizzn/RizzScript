@@ -12,7 +12,6 @@
 ✔ **Speaker Mapping & Auto-Guessing**  
    - Maps `Speaker A`, `Speaker B`, etc. to real names.  
    - **OpenAI integration** provides name suggestions.  
-   - **Fake chain-of-thought progress log** updates while processing.  
 
 ✔ **Timestamps Toggle**  
    - Apply or remove timestamps dynamically (`[HH:MM:SS]`).  
@@ -84,8 +83,7 @@ pip install pyqt5 assemblyai openai
 ### **2️⃣ Speaker Mapping**
 1. The **Speaker Mapping Panel** opens after transcription.  
 2. **Optional**: Enter **candidate names** in a comma-separated list.  
-3. Click **"Attempt to Autopopulate"**  
-   - Fake chain-of-thought logs update in real-time.  
+3. Click **"Attempt to Autopopulate"**   
    - When complete, suggested names appear.  
 4. Click **"Apply Changes"** to update the transcript.  
 
