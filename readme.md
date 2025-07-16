@@ -128,7 +128,7 @@ pip install pyqt5 assemblyai openai
 ---
 
 ## **📜 License**
-This project is licensed under the **MIT License**. See `LICENSE` for details.  
+This project is licensed under the **Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)**. See `LICENSE` for the full text.  
 
 ---
 
