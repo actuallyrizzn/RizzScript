@@ -188,6 +188,10 @@ If you encounter issues not covered in this guide:
 1. Check the main [README.md](README.md) troubleshooting section
 2. Search existing GitHub issues
 3. Create a new issue with detailed error information
+4. Contact the developer:
+   - **Mark Rizzn Hopkins**: guesswho@rizzn.com
+   - **Twitter**: [@rizzn](https://twitter.com/rizzn)
+   - **GitHub**: [@actuallyrizzn](https://github.com/actuallyrizzn)
 
 ---
 

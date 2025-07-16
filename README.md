@@ -50,7 +50,7 @@
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-username/rizzscript.git
+   git clone https://github.com/actuallyrizzn/rizzscript.git
    cd rizzscript
    ```
 
@@ -161,7 +161,7 @@ The application uses sophisticated analysis to identify speakers:
 
 1. **Clone and Setup Environment**
    ```bash
-   git clone https://github.com/your-username/rizzscript.git
+   git clone https://github.com/actuallyrizzn/rizzscript.git
    cd rizzscript
    python -m venv dev-env
    source dev-env/bin/activate  # Windows: dev-env\Scripts\activate
@@ -335,7 +335,9 @@ rizzscript/
 
 ## 📄 License
 
-This project is licensed under the **MIT License**. See the `LICENSE` file for detailed terms and conditions.
+This project is licensed under the **Creative Commons Attribution-ShareAlike 4.0 International License**. See the `LICENSE` file for detailed terms and conditions.
+
+You are free to share, adapt, and build upon this work, even commercially, as long as you provide appropriate attribution and distribute any derivatives under the same license.
 
 ### Third-Party Licenses
 - **PyQt5**: GPL/Commercial License
@@ -344,6 +346,7 @@ This project is licensed under the **MIT License**. See the `LICENSE` file for d
 
 ## 🙏 Acknowledgments
 
+- **Mark Rizzn Hopkins**: Creator and lead developer of RizzScript
 - **AssemblyAI**: For providing high-quality speech-to-text and diarization services
 - **OpenAI**: For advanced language model capabilities
 - **Qt/PyQt5**: For the robust cross-platform GUI framework
@@ -357,6 +360,12 @@ This project is licensed under the **MIT License**. See the `LICENSE` file for d
 - **API Documentation**: 
   - [AssemblyAI Docs](https://www.assemblyai.com/docs/)
   - [OpenAI API Reference](https://platform.openai.com/docs/)
+
+### Contact
+- **Developer**: Mark Rizzn Hopkins
+- **Email**: guesswho@rizzn.com
+- **Twitter**: [@rizzn](https://twitter.com/rizzn)
+- **GitHub**: [@actuallyrizzn](https://github.com/actuallyrizzn)
 
 ### Version Information
 - **Current Version**: 2.0.0

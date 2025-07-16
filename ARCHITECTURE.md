@@ -569,4 +569,13 @@ pydub>=0.25.0  # Audio format conversion
 
 ---
 
+## Contact & Support
+
+For questions about the technical architecture or implementation details:
+
+- **Developer**: Mark Rizzn Hopkins
+- **Email**: guesswho@rizzn.com
+- **Twitter**: [@rizzn](https://twitter.com/rizzn)
+- **GitHub**: [@actuallyrizzn](https://github.com/actuallyrizzn)
+
 This architecture document provides the foundation for understanding and contributing to RizzScript. For specific implementation details, refer to the inline code documentation and comments in `app.py`.

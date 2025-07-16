@@ -149,6 +149,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Submit pull requests for improvements
 - Help improve documentation
 
+### Contact
+- **Developer**: Mark Rizzn Hopkins
+- **Email**: guesswho@rizzn.com
+- **Twitter**: [@rizzn](https://twitter.com/rizzn)
+- **GitHub**: [@actuallyrizzn](https://github.com/actuallyrizzn)
+
 ---
 
-**Note**: This changelog is maintained manually. For a complete list of changes, see the [GitHub commit history](https://github.com/your-username/rizzscript/commits).
+**Note**: This changelog is maintained manually. For a complete list of changes, see the [GitHub commit history](https://github.com/actuallyrizzn/rizzscript/commits).

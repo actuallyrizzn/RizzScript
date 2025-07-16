@@ -26,7 +26,7 @@ Thank you for your interest in contributing to RizzScript! This document provide
 
 1. **Fork the Repository**
    ```bash
-   git fork https://github.com/your-username/rizzscript.git
+   git fork https://github.com/actuallyrizzn/rizzscript.git
    cd rizzscript
    ```
 
@@ -432,5 +432,9 @@ If you have questions not covered in this guide:
 1. Check the main README.md
 2. Search GitHub issues
 3. Create a new issue with the "question" label
+4. Contact the maintainer directly:
+   - **Mark Rizzn Hopkins**: guesswho@rizzn.com
+   - **Twitter**: [@rizzn](https://twitter.com/rizzn)
+   - **GitHub**: [@actuallyrizzn](https://github.com/actuallyrizzn)
 
 Thank you for contributing to RizzScript!
